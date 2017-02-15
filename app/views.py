@@ -11,6 +11,7 @@ GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
 encoderx=encoder(0,25,18,25)
 encodery=encoder(0,25,23,24)
+allpoints=[]
 
 
 @app.route('/new')
@@ -32,26 +33,14 @@ def show():
 
 @app.route('/addp')
 def addp():
-    points = [str(encoderx.value()),str(encoderx.value())]
-    return redirect(url_for('index'))
+    allpoints.append([encoderx.value(),encodery.value()])
+    return redirect(url_for('points'))
 
 @app.route('/points')
 def points():
-    print "punkty"
-    points = [  # fake array of points
-        { 
-            'valuex': {(encoderx.value())}, 
-            'valuey': {(encodery.value())}
-        },
-        { 
-            'valuex': {(encoderx.value()+10)}, 
-            'valuey': {(encodery.value()+10)}
-        }
-    ]
-    print points
     return render_template("points.html",
                            title='Points',
-                           points=points)
+                           allpoints=allpoints)
 
 @app.route('/')
 @app.route('/index')

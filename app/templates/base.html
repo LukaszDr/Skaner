@@ -10,6 +10,9 @@
     <div>Microblog:
         <a href="{{ url_for('index') }}">Home</a>
         {% if g.user.is_authenticated %}
+        | <a href="{{ url_for('points') }}">Show points</a>
+        | <a href="{{ url_for('addp') }}">Add point</a>
+	| <a href="{{ url_for('show') }}">Show actual position</a>
         | <a href="{{ url_for('logout') }}">Logout</a>
         {% endif %}
     </div>
