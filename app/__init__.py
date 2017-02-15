@@ -4,15 +4,10 @@ import os
 from flask_login import LoginManager
 from flask_openid import OpenID
 from config import basedir
-import RPi.GPIO as GPIO
-from encoder import encoder
 
 
-GPIO.setmode(GPIO.BCM)
-GPIO.cleanup()
-GPIO.setwarnings(False)
 
-pierwszy=encoder(0,25,18,25)
+
 
 app = Flask(__name__)
 app.config.from_object('config')

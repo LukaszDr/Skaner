@@ -3,7 +3,55 @@ from flask_login import login_user, logout_user, current_user, login_required
 from app import app, db, lm, oid
 from .forms import LoginForm
 from .models import User
+from encoder import encoder
+import RPi.GPIO as GPIO
 
+GPIO.cleanup()
+GPIO.setmode(GPIO.BCM)  
+GPIO.setwarnings(False)
+encoderx=encoder(0,25,18,25)
+encodery=encoder(0,25,23,24)
+
+
+@app.route('/new')
+def new():
+    encodery.clear()
+    encoderx.clear()
+    return render_template("value.html",
+                           title='Value',
+                           encodery=encodery,
+                           encoderx=encoderx)
+                           
+
+@app.route('/show')
+def show():
+    return render_template("value.html",
+                           title='Value',
+                           encodery=encodery,
+                           encoderx=encoderx)
+
+@app.route('/addp')
+def addp():
+    points = [str(encoderx.value()),str(encoderx.value())]
+    return redirect(url_for('index'))
+
+@app.route('/points')
+def points():
+    print "punkty"
+    points = [  # fake array of points
+        { 
+            'valuex': {(encoderx.value())}, 
+            'valuey': {(encodery.value())}
+        },
+        { 
+            'valuex': {(encoderx.value()+10)}, 
+            'valuey': {(encodery.value()+10)}
+        }
+    ]
+    print points
+    return render_template("points.html",
+                           title='Points',
+                           points=points)
 
 @app.route('/')
 @app.route('/index')
