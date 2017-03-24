@@ -4,7 +4,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nickname = db.Column(db.String(64), index=True, unique=True)
     email = db.Column(db.String(120), index=True, unique=True)
-    posts = db.relationship('Post', backref='author', lazy='dynamic')
+    measures = db.relationship('Measure', backref='author', lazy='dynamic')
 
     @property
     def is_authenticated(self):
@@ -25,13 +25,27 @@ class User(db.Model):
             return str(self.id)  # python 3
 
     def __repr__(self):
-        return '<User %r>' % (self.nickname)
+        return '<Post %r>' % (self.nickname)
 
-class Post(db.Model):
+class Measure(db.Model):
     id = db.Column(db.Integer, primary_key = True)
-    body = db.Column(db.String(140))
+    title = db.Column(db.String(140))
     timestamp = db.Column(db.DateTime)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    points = db.relationship('Point', backref='Post', lazy='dynamic')
 
     def __repr__(self):
-        return '<Post %r>' % (self.body)
+        return '<Post %r>' % (self.title)
+
+class Point(db.Model):
+    id = db.Column(db.Integer, primary_key = True)
+    value_x = db.Column(db.Float)
+    value_y = db.Column(db.Float)
+    measure_id = db.Column(db.Integer, db.ForeignKey('measure.id'))
+
+    def __repr__(self):
+        return '<Point %r>' % (self.value_x , self.value_y)
+
+
+
+
