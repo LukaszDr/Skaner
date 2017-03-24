@@ -32,19 +32,30 @@ class Measure(db.Model):
     title = db.Column(db.String(140))
     timestamp = db.Column(db.DateTime)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    points = db.relationship('Point', backref='Post', lazy='dynamic')
+    photos = db.relationship('Photo', backref='title', lazy='dynamic')
 
     def __repr__(self):
         return '<Post %r>' % (self.title)
+
+class Photo(db.Model):
+    id = db.Column(db.Integer, primary_key = True)
+    photopath = db.Column(db.String(50))
+    value_x = db.Column(db.Float)
+    value_y = db.Column(db.Float)
+    measure_id = db.Column(db.Integer, db.ForeignKey('measure.id'))
+    points = db.relationship('Point', backref='photopath', lazy='dynamic')
+
+    def __repr__(self):
+        return '<Point %r>' % (self.photopath)
 
 class Point(db.Model):
     id = db.Column(db.Integer, primary_key = True)
     value_x = db.Column(db.Float)
     value_y = db.Column(db.Float)
-    measure_id = db.Column(db.Integer, db.ForeignKey('measure.id'))
+    photo_id = db.Column(db.Integer, db.ForeignKey('photo.id'))
 
     def __repr__(self):
-        return '<Point %r>' % (self.value_x , self.value_y)
+        return '<Point %r>' % (self.value_x)
 
 
 
