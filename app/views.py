@@ -1,6 +1,8 @@
 from flask import render_template, flash, redirect, session, url_for, request, g
 from flask_login import login_user, logout_user, current_user, login_required
 from app import app, db, lm, oid, models
+import time
+import cv2 as cv2
 from .forms import LoginForm
 from .models import User
 from .models import Measure
@@ -58,7 +60,7 @@ def show():
     return render_template("value.html",
                            title='Value',
                            encodery=encodery,
-                           encoderx=encoderx)
+                           encoderx=encoderx,)
 
 @app.route('/addp')
 @login_required
@@ -69,6 +71,18 @@ def addp():
         flash('Make a new measure first!')
         return redirect(url_for('new'))
     allpoints.append([encoderx.value(),encodery.value()])
+    path=time.strftime("%Y%m%d-%H%M%S")
+    print path
+    
+    cam = cv2.VideoCapture(1)
+    s, im=cam.read()
+    cv2.imshow("haha", im)
+    
+    photo = Photo(photopath=path,
+                  value_x=encoderx.value(),
+                  value_y=encodery.value(),
+                  calculated=False,
+                  title=m)
     s=" "
     flash(s.join(('Points for measure:',str(m.title))))
     return redirect(url_for('points'))
