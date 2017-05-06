@@ -9,12 +9,15 @@ from encoder import encoder
 import RPi.GPIO as GPIO
 import datetime
 
+
+db.session.expire_on_commit=False
 GPIO.cleanup()
 GPIO.setmode(GPIO.BCM)  
 GPIO.setwarnings(False)
 encoderx=encoder(0,25,18,25)
 encodery=encoder(0,25,23,24)
 allpoints=[]
+current_measure_id = None
 
 
 @app.route('/new')
@@ -28,6 +31,7 @@ def new():
 @app.route('/new', methods=['POST'])
 @login_required
 def new_post():
+    global current_measure_id
     user=g.user
     name=request.form['measure_name']
     processed_text=name.upper()
@@ -40,6 +44,8 @@ def new_post():
         db.session.add(measure)
         db.session.commit()
         flash('New measure added! You can add points now.')
+        current_measure_id = measure.id
+        print current_measure_id
         return redirect(url_for('points'))
     flash('This name already exists')
     return redirect(url_for('new'))
@@ -57,7 +63,14 @@ def show():
 @app.route('/addp')
 @login_required
 def addp():
+    global current_measure_id
+    m = Measure.query.filter_by(id=current_measure_id).first()
+    if m is None:
+        flash('Make a new measure first!')
+        return redirect(url_for('new'))
     allpoints.append([encoderx.value(),encodery.value()])
+    s=" "
+    flash(s.join(('Points for measure:',str(m.title))))
     return redirect(url_for('points'))
 
 @app.route('/points')
@@ -109,7 +122,6 @@ def database():
     users = models.User.query.all()
     user = g.user
     measures = user.measures.all() #models.Measure.query.all()
-    
     return render_template("database.html",
                            title='database',
                            users=users,
