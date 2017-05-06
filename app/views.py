@@ -1,10 +1,13 @@
 from flask import render_template, flash, redirect, session, url_for, request, g
 from flask_login import login_user, logout_user, current_user, login_required
-from app import app, db, lm, oid
+from app import app, db, lm, oid, models
 from .forms import LoginForm
 from .models import User
+from .models import Measure
+from .models import Photo
 from encoder import encoder
 import RPi.GPIO as GPIO
+import datetime
 
 GPIO.cleanup()
 GPIO.setmode(GPIO.BCM)  
@@ -15,16 +18,36 @@ allpoints=[]
 
 
 @app.route('/new')
+@login_required
 def new():
     encodery.clear()
     encoderx.clear()
-    return render_template("value.html",
-                           title='Value',
-                           encodery=encodery,
-                           encoderx=encoderx)
+    user=g.user
+    return render_template("new.html")
+
+@app.route('/new', methods=['POST'])
+@login_required
+def new_post():
+    user=g.user
+    name=request.form['measure_name']
+    processed_text=name.upper()
+    if processed_text is None or processed_text == "":
+        flash('Invalid name. Try again')
+        return redirect(url_for('new'))
+    measure= Measure.query.filter_by(title=processed_text).first()
+    if measure is None:
+        measure= Measure(title=processed_text, timestamp=datetime.datetime.utcnow(),author=user)
+        db.session.add(measure)
+        db.session.commit()
+        flash('New measure added! You can add points now.')
+        return redirect(url_for('points'))
+    flash('This name already exists')
+    return redirect(url_for('new'))
+
                            
 
 @app.route('/show')
+@login_required
 def show():
     return render_template("value.html",
                            title='Value',
@@ -32,11 +55,13 @@ def show():
                            encoderx=encoderx)
 
 @app.route('/addp')
+@login_required
 def addp():
     allpoints.append([encoderx.value(),encodery.value()])
     return redirect(url_for('points'))
 
 @app.route('/points')
+@login_required
 def points():
     return render_template("points.html",
                            title='Points',
@@ -76,10 +101,25 @@ def login():
                            form=form,
                            providers=app.config['OPENID_PROVIDERS'])
 
+
+
+@app.route('/database', methods=['GET'])
+@login_required
+def database():
+    users = models.User.query.all()
+    user = g.user
+    measures = user.measures.all() #models.Measure.query.all()
+    
+    return render_template("database.html",
+                           title='database',
+                           users=users,
+                           measures=measures)
+
 @app.route('/logout')
 def logout():
     logout_user()
     return redirect(url_for('index'))
+
 
 @lm.user_loader
 def load_user(id):

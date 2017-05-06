@@ -25,7 +25,7 @@ class User(db.Model):
             return str(self.id)  # python 3
 
     def __repr__(self):
-        return '<Post %r>' % (self.nickname)
+        return '<Name %r>' % (self.nickname)
 
 class Measure(db.Model):
     id = db.Column(db.Integer, primary_key = True)
@@ -35,13 +35,14 @@ class Measure(db.Model):
     photos = db.relationship('Photo', backref='title', lazy='dynamic')
 
     def __repr__(self):
-        return '<Post %r>' % (self.title)
+        return '<Name %r>' % (self.title)
 
 class Photo(db.Model):
     id = db.Column(db.Integer, primary_key = True)
     photopath = db.Column(db.String(50))
     value_x = db.Column(db.Float)
     value_y = db.Column(db.Float)
+    calculated=db.Column(db.Boolean)
     measure_id = db.Column(db.Integer, db.ForeignKey('measure.id'))
     points = db.relationship('Point', backref='photopath', lazy='dynamic')
 
