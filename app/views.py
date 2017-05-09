@@ -2,7 +2,6 @@ from flask import render_template, flash, redirect, session, url_for, request, g
 from flask_login import login_user, logout_user, current_user, login_required
 from app import app, db, lm, oid, models
 import time
-import cv2 as cv2
 from .forms import LoginForm
 from .models import User
 from .models import Measure
@@ -10,6 +9,8 @@ from .models import Photo
 from encoder import encoder
 import RPi.GPIO as GPIO
 import datetime
+import cv2
+import os
 
 
 db.session.expire_on_commit=False
@@ -71,13 +72,17 @@ def addp():
         flash('Make a new measure first!')
         return redirect(url_for('new'))
     allpoints.append([encoderx.value(),encodery.value()])
-    path=time.strftime("%Y%m%d-%H%M%S")
-    print path
+    filename=time.strftime("%Y%m%d-%H%M%S")
     
-    cam = cv2.VideoCapture(1)
+    cam = cv2.VideoCapture(0)
     s, im=cam.read()
-    cv2.imshow("haha", im)
-    
+    path = '/home/pi/skaner/app/photos/' + m.title
+    try:
+        os.stat(path)
+    except:
+        os.mkdir(path)
+    path=path + '/' + filename + '.png'
+    cv2.imwrite(path, im)
     photo = Photo(photopath=path,
                   value_x=encoderx.value(),
                   value_y=encodery.value(),

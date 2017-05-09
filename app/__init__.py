@@ -1,6 +1,5 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-import cv2 as cv2
 import os
 from flask_login import LoginManager
 from flask_openid import OpenID
