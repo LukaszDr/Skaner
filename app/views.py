@@ -24,15 +24,34 @@ current_measure_id = None
 
 
 #watek przetwarzania
+def compute( threadname, photo_id, measure):
+    photo=Photo.query.filter_by(id=photo_id).first()
+    img = cv2.imread(photo.photopath,0)
+    edges=cv2.Canny(img,measure.minVal,measure.maxVal)
+    path = os.path.basename(photo.photopath)
+    path = '/home/pi/skaner/app/photos/' + measure.title + '/edges/' + path
+    print path
+    cv2.imwrite(path,edges)
+    photo.calculated=True
+    db.session.commit()
+    print photo.photopath
+    print "przetworzone"
+    return 0
+
 
 #watek do sprawdzania obrabiania
 def computecheck(threadname, measure):
     global current_measure_id
+    measure = Measure.query.filter_by(id=current_measure_id).first()
     while(measure.active):
         p= Photo.query.filter_by(measure_id=measure.id).filter_by(calculated=False)
         for i in p:
-            print i.photopath
+            thread.start_new_thread(compute, (i.photopath, i.id , measure, ))
+            print"sa lipy"
+ 
+        
         measure = Measure.query.filter_by(id=current_measure_id).first()
+        #db.session.commit()
         time.sleep(1)
     return 0
 
@@ -79,6 +98,7 @@ def new_post():
         current_measure_id = measure.id
         print current_measure_id
         thread.start_new_thread(computecheck, (measure.title, measure, ))
+        db.session.commit()
         return redirect(url_for('points'))
     flash('This name already exists')
     return redirect(url_for('new'))
@@ -111,6 +131,7 @@ def addp():
         os.stat(path)
     except:
         os.mkdir(path)
+        os.mkdir(path + '/edges')
     path=path + '/' + filename + '.png'
     cv2.imwrite(path, im)
     photo = Photo(photopath=path,
@@ -173,6 +194,7 @@ def database():
     users = models.User.query.all()
     user = g.user
     measures = user.measures.all() #models.Measure.query.all()
+    db.session.commit()
     return render_template("database.html",
                            title='database',
                            users=users,
@@ -181,6 +203,7 @@ def database():
 @app.route('/logout')
 def logout():
     logout_user()
+    db.session.commit()
     return redirect(url_for('index'))
 
 
