@@ -6,6 +6,7 @@ from .forms import LoginForm
 from .models import User
 from .models import Measure
 from .models import Photo
+from .models import Point
 from encoder import encoder
 import RPi.GPIO as GPIO
 import datetime
@@ -26,14 +27,34 @@ current_measure_id = None
 #watek przetwarzania
 def compute( threadname, photo_id, measure):
     photo=Photo.query.filter_by(id=photo_id).first()
+    photo.calculated=True
+    db.session.commit()
     img = cv2.imread(photo.photopath,0)
     edges=cv2.Canny(img,measure.minVal,measure.maxVal)
     path = os.path.basename(photo.photopath)
     path = '/home/pi/skaner/app/photos/' + measure.title + '/edges/' + path
     print path
     cv2.imwrite(path,edges)
-    photo.calculated=True
-    db.session.commit()
+
+
+    #skalowanie i dodwanie
+
+    #sprawdzam rozdzielczosc
+    rowcount=edges.shape[0]
+    columncount=edges.shape[1]
+    
+
+    
+    #dodaje punkty
+    for i in range(50,rowcount-51):
+        for j in range(50,columncount-51):
+            if(edges[i,j]!=0):
+                point= Point(value_x=photo.value_x+(i*measure.scale),
+                            value_y=photo.value_y+(j*measure.scale),
+                            photopath=photo)
+                print point.value_x
+                db.session.add(point)
+                db.session.commit()
     print photo.photopath
     print "przetworzone"
     return 0
