@@ -31,6 +31,10 @@ class Measure(db.Model):
     id = db.Column(db.Integer, primary_key = True)
     title = db.Column(db.String(140))
     timestamp = db.Column(db.DateTime)
+    minVal = db.Column(db.Integer)
+    maxVal = db.Column(db.Integer)
+    scale = db.Column(db.Integer)
+    active = db.Column(db.Boolean)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     photos = db.relationship('Photo', backref='title', lazy='dynamic')
 

@@ -11,7 +11,7 @@ import RPi.GPIO as GPIO
 import datetime
 import cv2
 import os
-
+import thread
 
 db.session.expire_on_commit=False
 GPIO.cleanup()
@@ -21,6 +21,20 @@ encoderx=encoder(0,25,18,25)
 encodery=encoder(0,25,23,24)
 allpoints=[]
 current_measure_id = None
+
+
+#watek przetwarzania
+
+#watek do sprawdzania obrabiania
+def computecheck(threadname, measure):
+    global current_measure_id
+    while(measure.active):
+        p= Photo.query.filter_by(measure_id=measure.id).filter_by(calculated=False)
+        for i in p:
+            print i.photopath
+        measure = Measure.query.filter_by(id=current_measure_id).first()
+        time.sleep(1)
+    return 0
 
 
 @app.route('/new')
@@ -43,12 +57,28 @@ def new_post():
         return redirect(url_for('new'))
     measure= Measure.query.filter_by(title=processed_text).first()
     if measure is None:
-        measure= Measure(title=processed_text, timestamp=datetime.datetime.utcnow(),author=user)
+        #niekatywnosc
+        m= Measure.query.filter_by(active=True)
+        for i in m:
+            i.active=False
+            db.session.commit()
+            print i.title
+
+        #tworze nowy
+        measure= Measure(title=processed_text,
+                         timestamp=datetime.datetime.utcnow(),
+                         #DO USTALENIA!!!!
+                         minVal=400,
+                         maxVal=500,
+                         scale=0.08,
+                         active=True,
+                         author=user)
         db.session.add(measure)
         db.session.commit()
         flash('New measure added! You can add points now.')
         current_measure_id = measure.id
         print current_measure_id
+        thread.start_new_thread(computecheck, (measure.title, measure, ))
         return redirect(url_for('points'))
     flash('This name already exists')
     return redirect(url_for('new'))
@@ -89,6 +119,8 @@ def addp():
                   calculated=False,
                   title=m)
     s=" "
+    db.session.add(photo)
+    db.session.commit()
     flash(s.join(('Points for measure:',str(m.title))))
     return redirect(url_for('points'))
 
