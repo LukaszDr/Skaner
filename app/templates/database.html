@@ -1,7 +1,41 @@
 {% extends "base.html" %}
 {% block content %}
 	<h1>Users:</h1>
- 	<div><p>{{ users }}</p></div>
-	<h1>Measures:</h1>
- 	<div><p>{{ measures }}</p></div>
+	<table border="1">
+			<thead>
+				<tr>
+					<th>No.</th>
+					<th>Name</th>
+					<th>E-mail</th>
+				</tr>
+			</thead>
+		<tbody>
+			{% for u in users %}
+				<tr>
+					<td> {{ u.id }}		</td>
+					<td> {{ u.nickname }}	</td>
+					<td> {{ u.email }}	</td>
+				</tr>
+			{% endfor %}
+		</tbody>
+	</table>	
+	<h1>Your measures:</h1>
+	<table border="1">
+			<thead>
+				<tr>
+					<th>No.</th>
+					<th>Date and time</th>
+					<th>Name</th>
+				</tr>
+			</thead>
+		<tbody>
+			{% for m in measures %}
+				<tr>
+					<td> {{ m.id }}		</td>
+					<td> {{ m.timestamp }}	</td>
+					<td> {{ m.title }}	</td>
+				</tr>
+			{% endfor %}
+		</tbody>
+	</table>
 {% endblock %}
