@@ -1,4 +1,4 @@
-from flask import render_template, flash, redirect, session, url_for, request, g
+from flask import render_template, flash, redirect, session, url_for, request, g, send_from_directory, send_file
 from flask_login import login_user, logout_user, current_user, login_required
 from app import app, db, lm, oid, models
 import time
@@ -256,11 +256,45 @@ def database_post():
 
     #wyswietlanie
     else:
-
+        #cookie?
+        session['selected_id']=selected_id
         s=" "
-        flash(s.join(('Info about measure:',str(selected_id))))
-        return redirect(url_for('database'))    
+        return redirect(url_for('info', selected_id=selected_id))    
+
+
+@app.route('/info')
+@login_required
+def info():
+    selected_id=session['selected_id']
+    m = Measure.query.filter_by(id=int(selected_id)).first()
+    #return send_file("a.png", as_attachment=True)
+    return render_template("info.html")
+
+@app.route('/download')
+@login_required
+def download():
+    selected_id=session['selected_id']
+    m = Measure.query.filter_by(id=int(selected_id)).first()
+
+    #tutaj pdomienic sciezke results.csv 
+    path = '/home/pi/skaner/app/photos/' + m.title + '/results3.csv'
+    F = open(path, 'w')
+    photos=m.photos.all()
+    for photo in photos:
+        points=photo.points.all()
+        for point in points:
+            F.write(str(point.value_x)+(",")+str(point.value_y)+"\n")
+    F.close
+    print "end"
+    return send_file(path, as_attachment=True)
+#@app.route('/download/<path:filename>')
+#@login_required
+#def serve_static(filename):
+ #   selected_id=session['selected_id']
     
+    #root_dir=os.path.dirname(os.getcwd())
+    #flash(str(filename))
+  #  return send_file("a.png", as_attachment=True)
 
 @app.route('/logout')
 def logout():
