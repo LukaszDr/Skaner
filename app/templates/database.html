@@ -26,6 +26,8 @@
 					<th>No.</th>
 					<th>Date and time</th>
 					<th>Name</th>
+					<th>Show</th>
+					<th>Delete</th>
 				</tr>
 			</thead>
 		<tbody>
@@ -34,6 +36,16 @@
 					<td> {{ m.id }}		</td>
 					<td> {{ m.timestamp }}	</td>
 					<td> {{ m.title }}	</td>
+					<td>
+					<form action="" method="post">
+						<input type="submit" name="submit" value=s{{m.id}}>
+					</form>
+					</td>
+					<td>
+					<form action="" method="post">
+						<input type="submit" name="submit" value=d{{m.id}}>
+					</form>
+					</td>
 				</tr>
 			{% endfor %}
 		</tbody>

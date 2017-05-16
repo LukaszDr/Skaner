@@ -13,6 +13,7 @@ import datetime
 import cv2
 import os
 import thread
+import shutil
 
 db.session.expire_on_commit=False
 GPIO.cleanup()
@@ -220,6 +221,46 @@ def database():
                            title='database',
                            users=users,
                            measures=measures)
+
+@app.route('/database', methods=['POST'])
+@login_required
+def database_post():
+    #wyciagam info z html
+    info = str(request.form['submit'])
+    selected_id=info.replace(info[:1],'')
+    info=info[:1]
+    selected_id=int(selected_id)
+    m = Measure.query.filter_by(id=selected_id).first()
+
+    #usuwania
+    if(info=="d"):
+        allp=m.photos.all()
+        for p in allp:
+            allpoints=p.points.all()
+            for point in allpoints:
+                db.session.delete(point)
+            print p.points.all()
+            db.session.delete(p)
+
+        db.session.delete(m)
+        db.session.commit()
+        #usuwam pliki
+        try:
+            path = '/home/pi/skaner/app/photos/' + m.title + '/'
+            shutil.rmtree(path)
+        except:
+            print 'directory already deleted'
+        s=" "
+        flash(s.join(('Succesfuly deleted measure:',str(selected_id))))
+        return redirect(url_for('database'))
+
+    #wyswietlanie
+    else:
+
+        s=" "
+        flash(s.join(('Info about measure:',str(selected_id))))
+        return redirect(url_for('database'))    
+    
 
 @app.route('/logout')
 def logout():
