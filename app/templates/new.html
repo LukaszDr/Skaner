@@ -1,8 +1,16 @@
 {% extends "base.html" %}
 {% block content %}
-	<h1>Enter measure name<h1>
+	<h1>Enter measure parameters:<h1>
 	<form action="new" method="POST">
+		<p>Enter measure name:</p>
 		<input type="text" name="measure_name">
-		<input_type="submit" name="new" value="Send">
+		<p>Enter minimal value for for Canny algorythm (leave blank for typical value)</p>
+		<input type="text" name="min_value">
+		<p>Enter maximal value for for Canny algorythm (leave blank for typical value)</p>
+		<input type="text" name="max_value">
+		<p>Enter scale value (leave blank for typical value)</p>
+		<input type="text" name="scale">
+		<p> </p>
+		<button type="submit" id="button">submit</button>
 	</form>
 {% endblock %}

@@ -15,6 +15,7 @@ import os
 import thread
 import shutil
 
+db.session=db.create_scoped_session()
 db.session.expire_on_commit=False
 GPIO.cleanup()
 GPIO.setmode(GPIO.BCM)  
@@ -25,9 +26,10 @@ allpoints=[]
 current_measure_id = None
 
 
+
 #watek przetwarzania
 def compute( threadname, photo_id, measure):
-    db.session=db.create_scoped_session()
+    #db.session=db.create_scoped_session()
     
     photo=Photo.query.filter_by(id=photo_id).first()
     photo.calculated=True
@@ -47,7 +49,7 @@ def compute( threadname, photo_id, measure):
     columncount=edges.shape[1]
     
 
-    
+    print ("przed petla")
     #dodaje punkty
     for i in range(50,rowcount-51):
         for j in range(50,columncount-51):
@@ -55,12 +57,9 @@ def compute( threadname, photo_id, measure):
                 point= Point(value_x=photo.value_x+(i*measure.scale),
                             value_y=photo.value_y+(j*measure.scale),
                             photopath=photo)
-                print point.value_x
                 db.session.add(point)
                 db.session.commit()
-    print photo.photopath
-    print "przetworzone"
-    db.session.remove()
+    print ("po petli")
     return 0
 
 
@@ -77,7 +76,7 @@ def computecheck(threadname, measure):
         
         measure = Measure.query.filter_by(id=current_measure_id).first()
         #db.session.commit()
-        time.sleep(3)
+        time.sleep(1)
     return 0
 
 
@@ -108,6 +107,38 @@ def new_post():
             db.session.commit()
             print i.title
 
+        #wczytuje pozostale dane nt pomiaru
+        m_minimal=request.form['min_value']
+        m_maximal=request.form['max_value']
+        m_scale=request.form['scale']
+
+        #check if values are numbers
+        try:
+            float(m_minimal)
+        except:
+            m_minimal=400
+            flash("value must be numbers. Typical value assigned to uncorrect values. Try editing")
+            
+        try:
+            float(m_maximal)
+        except:
+            m_maximal=500
+            flash("value must be numbers. Typical value assigned to uncorrect values. Try editing")
+            
+        try:
+            float(m_scale)
+        except:
+            m_scale=0.08
+            flash("value must be numbers. Typical value assigned to uncorrect values. Try editing")
+        
+        #assign typical values if None
+        if m_minimal is None or m_minimal == "":
+            m_minimal=400
+        if m_maximal is None or m_minimal == "":
+            m_maximal=500
+        if m_scale is None or m_minimal == "":
+            m_scale=0.08
+        
         #czyszcze encodery    
         encodery.clear()
         encoderx.clear()
@@ -115,9 +146,9 @@ def new_post():
         measure= Measure(title=processed_text,
                          timestamp=datetime.datetime.utcnow(),
                          #DO USTALENIA!!!!
-                         minVal=400,
-                         maxVal=500,
-                         scale=0.08,
+                         minVal=m_minimal,
+                         maxVal=m_maximal,
+                         scale=m_scale,
                          active=True,
                          author=user)
         db.session.add(measure)
@@ -125,6 +156,9 @@ def new_post():
         flash('New measure added! You can add points now.')
         current_measure_id = measure.id
         print current_measure_id
+
+        #start watku sprawdzajacego czy jest cos do przetworzenia
+        
         thread.start_new_thread(computecheck, (measure.title, measure, ))
         db.session.commit()
         return redirect(url_for('points'))
@@ -170,7 +204,8 @@ def addp():
     s=" "
     db.session.add(photo)
     db.session.commit()
-    flash(s.join(('Points for measure:',str(m.title))))
+    flash(s.join(('Added photo for measure:',str(m.title))))
+    session['selected_id']=m.id
     return redirect(url_for('points'))
 
 @app.route('/points')
@@ -272,30 +307,111 @@ def database_post():
 @login_required
 def info():
     selected_id=session['selected_id']
-    m = Measure.query.filter_by(id=int(selected_id)).first()
     #return send_file("a.png", as_attachment=True)
     
     m = Measure.query.filter_by(id=int(selected_id)).first()
     path = '/home/pi/skaner/app/photos/' + m.title + '/results of ' + m.title+ '.csv'
-    F = open(path, 'w')
-    photos=m.photos.all()
-    for photo in photos:
-        points=photo.points.all()
-        for point in points:
-            F.write(str(point.value_x)+(",")+str(point.value_y)+"\n")
-    F.close
-    print path
-
+    try:
+        F = open(path, 'w')
+        photos=m.photos.all()
+        for photo in photos:
+            points=photo.points.all()
+            for point in points:
+                F.write(str(point.value_x)+(",")+str(point.value_y)+"\n")
+        F.close
+        print path
+    except:
+        flash("This measurement has no photos taken!")
     
-    return render_template("info.html")
+    return render_template("info.html",
+                           m=m)
 
 @app.route('/download')
 @login_required
 def download():
     selected_id=session['selected_id']
     m = Measure.query.filter_by(id=int(selected_id)).first()
-    path = '/home/pi/skaner/app/photos/' + m.title + '/results of ' + m.title+ '.csv'
-    return send_file(path, as_attachment=True)
+    try:
+        path = '/home/pi/skaner/app/photos/' + m.title + '/results of ' + m.title+ '.csv'
+        return send_file(path, as_attachment=True)
+    except:
+        flash("Cannot generate file! This measurement has no photos taken!")
+        return render_template("info.html",
+                               m=m)
+    
+@app.route('/edit', methods=['POST'])
+@login_required
+def edit():
+    selected_id=session['selected_id']
+    selected_id=request.form['mes_id']
+    m = Measure.query.filter_by(id=int(selected_id)).first()
+
+    #wczytuje pozostale dane nt pomiaru
+    m_minimal=request.form['min_value']
+    m_maximal=request.form['max_value']
+    m_scale=request.form['scale']
+    
+    #check if values are numbers
+    try:
+        float(m_minimal)
+    except:
+        m_minimal=""
+        flash("value must be numbers. Value left as it is. Try editing again")
+            
+    try:
+        float(m_maximal)
+    except:
+        m_maximal=""
+        flash("value must be numbers. Value left as it is. Try editing again")
+            
+    try:
+        float(m_scale)
+    except:
+        m_scale=""
+        flash("value must be numbers. Value left as it is. Try editing again")
+
+    change=False
+    #leave values if None
+    if m_minimal is None or m_minimal == "":
+        m_minimal=m.minVal
+    else:
+        change=True
+    if m_maximal is None or m_maximal == "":
+        m_maximal=m.maxVal
+    else:
+        change=True
+    if m_scale is None or m_scale == "":
+        m_scale=m.scale
+    else:
+        change=True
+        
+    if change == True:
+        m.minVal=m_minimal
+        m.maxVal=m_maximal
+        m.scale=m_scale
+        db.session.commit()
+        flash("editing succesfull")
+        exist=False
+        
+        #sprawdzam czy to aktualny pomiar, jak tak to zeruje flagi przetworzenia zdjec i niszcze punkty
+        if m.active==True:
+            photos=m.photos.all()
+            for photo in photos:
+                points=photo.points.all()
+                for point in points:
+                    db.session.delete(point)
+                photo.calculated=False
+            db.session.commit()
+            flash("current measure being recalculated")
+        #jak nie to rbie osobny watek andzorujacy, ktory sie raz wywola i wszystko pieknie przetworzy
+        else:
+            flash ("old emasure being recalculated")
+            
+        
+        return render_template("info.html",
+                            m=m)    
+
+
 #@app.route('/download/<path:filename>')
 #@login_required
 #def serve_static(filename):
