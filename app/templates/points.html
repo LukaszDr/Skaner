@@ -1,5 +1,24 @@
 {% extends "base.html" %}
 {% block content %}
-	<h1>Points:</h1>
- 	<div><p>{{ allpoints}}</p></div>
+	<h1>Photos for measure {{ m.title }} :</h1>
+	<table border="1">
+			<thead>
+				<tr>
+					<th>No.</th>
+					<th>X</th>
+					<th>Y</th>
+					<th>processed</th>
+				</tr>
+			</thead>
+		<tbody>
+			{% for i in p %}
+				<tr>
+					<td> {{ i.id }}		</td>
+					<td> {{ i.value_x }}	</td>
+					<td> {{ i.value_y }}	</td>
+					<td> {{ i.calculated }}	</td>
+				</tr>
+			{% endfor %}
+		</tbody>
+	</table>		
 {% endblock %}

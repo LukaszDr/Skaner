@@ -68,15 +68,16 @@ def computecheck(threadname, measure):
     global current_measure_id
     measure = Measure.query.filter_by(id=current_measure_id).first()
     while(measure.active):
-        p= Photo.query.filter_by(measure_id=measure.id).filter_by(calculated=False)
-        for i in p:
-            thread.start_new_thread(compute, (i.photopath, i.id , measure, ))
-            print"sa lipy"
- 
-        
-        measure = Measure.query.filter_by(id=current_measure_id).first()
+        try:
+            p= Photo.query.filter_by(measure_id=measure.id).filter_by(calculated=False)
+            for i in p:
+                thread.start_new_thread(compute, (i.photopath, i.id , measure, ))
+                print"sa lipy"
+            time.sleep(1)
+        except:
+            measure = Measure.query.filter_by(id=current_measure_id).first()
         #db.session.commit()
-        time.sleep(1)
+            time.sleep(1)
     return 0
 
 
@@ -211,9 +212,13 @@ def addp():
 @app.route('/points')
 @login_required
 def points():
+    global current_measure_id
+    m = Measure.query.filter_by(id=current_measure_id).first()
+    p = m.photos.all()
     return render_template("points.html",
                            title='Points',
-                           allpoints=allpoints)
+                           m=m,
+                           p=p)
 
 @app.route('/')
 @app.route('/index')
