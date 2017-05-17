@@ -15,6 +15,9 @@ import os
 import thread
 import shutil
 
+#dodane:
+from multiprocessing import Process
+
 db.session=db.create_scoped_session()
 db.session.expire_on_commit=False
 GPIO.cleanup()
@@ -32,8 +35,9 @@ def compute( threadname, photo_id, measure):
     #db.session=db.create_scoped_session()
     
     photo=Photo.query.filter_by(id=photo_id).first()
-    photo.calculated=True
-    db.session.commit()
+    #przeniesione nizej
+    #photo.calculated=True
+    #db.session.commit()
     img = cv2.imread(photo.photopath,0)
     edges=cv2.Canny(img,measure.minVal,measure.maxVal)
     path = os.path.basename(photo.photopath)
@@ -59,11 +63,13 @@ def compute( threadname, photo_id, measure):
                             photopath=photo)
                 db.session.add(point)
                 db.session.commit()
+    photo.calculated=True
+    db.session.commit()
     print ("po petli")
     return 0
 
 
-#watek do sprawdzania obrabiania
+#watek do sprawdzania obrabiania NIEUZYWANE
 def computecheck(threadname, measure):
     global current_measure_id
     measure = Measure.query.filter_by(id=current_measure_id).first()
@@ -71,7 +77,9 @@ def computecheck(threadname, measure):
         try:
             p= Photo.query.filter_by(measure_id=measure.id).filter_by(calculated=False)
             for i in p:
-                thread.start_new_thread(compute, (i.photopath, i.id , measure, ))
+                #thread.start_new_thread(compute, (i.photopath, i.id , measure, ))
+                com = Process(target=compute, args=(i.photopath, i.id , measure, ))
+                com.start()
                 print"sa lipy"
             time.sleep(1)
         except:
@@ -160,7 +168,11 @@ def new_post():
 
         #start watku sprawdzajacego czy jest cos do przetworzenia
         
-        thread.start_new_thread(computecheck, (measure.title, measure, ))
+        #thread.start_new_thread(computecheck, (measure.title, measure, ))
+        #p = Process(target=computecheck, args=(measure.title, measure, ))
+        #p.start()
+        #p.join()
+        
         db.session.commit()
         return redirect(url_for('points'))
     flash('This name already exists')
@@ -175,7 +187,21 @@ def show():
                            title='Value',
                            encodery=encodery,
                            encoderx=encoderx,)
-
+@app.route('/activate')
+@login_required
+def activate():
+    global current_measure_id
+    current_measure_id=session['selected_id']
+    m = Measure.query.filter_by(id=current_measure_id).first()
+    photos=m.photos.all()
+    for photo in photos:
+        if photo.calculated==False:
+            proc = Process(target=compute, args=(photo.photopath, photo.id , m, ))
+            proc.start()
+            print (photo.photopath)
+        
+    return redirect(url_for('points'))
+    
 @app.route('/addp')
 @login_required
 def addp():
@@ -186,9 +212,19 @@ def addp():
         return redirect(url_for('new'))
     allpoints.append([encoderx.value(),encodery.value()])
     filename=time.strftime("%Y%m%d-%H%M%S")
+
+    try:
+        cam = cv2.VideoCapture(0)
+        s, im=cam.read()
+     #check if photo is taken
+        im.shape
+    except:
+        temp=" "
+        flash(temp.join(('FAILURE!! adding photo for measure:',str(m.title),'CAMERA NOT READY')))
+        session['selected_id']=m.id
+        return redirect(url_for('points'))
+
     
-    cam = cv2.VideoCapture(0)
-    s, im=cam.read()
     path = '/home/pi/skaner/app/photos/' + m.title
     try:
         os.stat(path)
@@ -205,6 +241,10 @@ def addp():
     s=" "
     db.session.add(photo)
     db.session.commit()
+
+    i= Photo.query.filter_by(photopath=path).first()
+    com = Process(target=compute, args=(i.photopath, i.id , m, ))
+    com.start()
     flash(s.join(('Added photo for measure:',str(m.title))))
     session['selected_id']=m.id
     return redirect(url_for('points'))
@@ -214,7 +254,14 @@ def addp():
 def points():
     global current_measure_id
     m = Measure.query.filter_by(id=current_measure_id).first()
-    p = m.photos.all()
+    try:
+        p = m.photos.all()
+    except:
+        cur_id=session['selected_id']
+        m = Measure.query.filter_by(id=cur_id).first()
+        p = m.photos.all()
+        
+    session['selected_id']=m.id
     return render_template("points.html",
                            title='Points',
                            m=m,
@@ -397,20 +444,35 @@ def edit():
         db.session.commit()
         flash("editing succesfull")
         exist=False
-        
+
+
+        #w koncu nie ma znaczenia czy stary czy nowy
         #sprawdzam czy to aktualny pomiar, jak tak to zeruje flagi przetworzenia zdjec i niszcze punkty
-        if m.active==True:
-            photos=m.photos.all()
-            for photo in photos:
-                points=photo.points.all()
-                for point in points:
-                    db.session.delete(point)
-                photo.calculated=False
-            db.session.commit()
-            flash("current measure being recalculated")
+        #if m.active==True:
+        #    photos=m.photos.all()
+        #    for photo in photos:
+        #        points=photo.points.all()
+        #        for point in points:
+        #            db.session.delete(point)
+        #        photo.calculated=False
+        #        db.session.commit()
+        #        proc = Process(target=compute, args=(photo.photopath, photo.id , m, ))
+        #        proc.start()
+        #    db.session.commit()
+        #    flash("current measure being recalculated")
         #jak nie to rbie osobny watek andzorujacy, ktory sie raz wywola i wszystko pieknie przetworzy
-        else:
-            flash ("old emasure being recalculated")
+        #else:
+        photos=m.photos.all()
+        for photo in photos:
+            points=photo.points.all()
+            for point in points:
+                db.session.delete(point)
+            photo.calculated=False
+            db.session.commit()
+            proc = Process(target=compute, args=(photo.photopath, photo.id , m, ))
+            proc.start()
+        db.session.commit()
+            #flash ("old emasure being recalculated")
             
         
         return render_template("info.html",

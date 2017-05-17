@@ -1,7 +1,5 @@
 {% extends "base.html" %}
 {% block content %}
-    <h1>Hi, {{ user.nickname }}!</h1>
-    {% for post in posts %}
-    <div><p>{{ post.author.nickname }} says: <b>{{ post.body }}</b></p></div>
-    {% endfor %}
+	<h1>Hi, {{ user.nickname }}!</h1>
+	<h1><a href="{{ url_for('new') }}">Click here to start new measure</a></h1>
 {% endblock %}

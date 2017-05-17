@@ -7,16 +7,18 @@
     {% endif %}
   </head>
   <body>
-    <div>Microblog:
-        <a href="{{ url_for('index') }}">Home</a>
+    <h1>
+    <div>SCANNER:
         {% if g.user.is_authenticated %}
-        | <a href="{{ url_for('points') }}">Show points</a>
-        | <a href="{{ url_for('addp') }}">Add point</a>
-	| <a href="{{ url_for('show') }}">Show actual position</a>
-        | <a href="{{ url_for('logout') }}">Logout</a>
-	| <a href="{{ url_for('database') }}">all measures</a>
+        | <a href="{{ url_for('addp') }}">Make a photo</a>
+        | <a href="{{ url_for('points') }}">Show current photos</a>
+	| <a href="{{ url_for('new') }}">Start new measure</a>
+	| <a href="{{ url_for('info') }}">Info & edit options</a>
+	| <a href="{{ url_for('database') }}">Database</a>
+	| <a href="{{ url_for('logout') }}">Logout</a>
         {% endif %}
     </div>
+    </h1>
     <hr>
     {% with messages = get_flashed_messages() %}
     {% if messages %}
