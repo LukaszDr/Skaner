@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+	<h1>Information about measure: {{ m.title }}</h1>
+	<a href="download">Downlaod .csv file</a>
+	<table border="1">
+			<thead>
+				<tr>
+					<th>Name</th>
+					<th>timestamp</th>
+					<th>min. val. of algorithm</th>
+					<th>max. val. of algorithm</th>
+					<th>scale</th>
+				</tr>
+			</thead>
+		<tbody>
+				<tr>
+					<td> {{ m.title }}		</td>
+					<td> {{ m.timestamp }}	</td>
+					<td> {{ m.minVal }}	</td>
+					<td> {{ m.maxVal }}	</td>
+					<td> {{ m.scale }}	</td>
+				</tr>
+		</tbody>
+	</table>	
+	<form action="edit" method="POST">
+		<h1>Change parameters of the algorithm and recalculate it. Other calculations will stop!. Blank field will not be changed.</h1>
+		<p>Enter minimal value for for Canny algorythm</p>
+		<input type="text" name="min_value">
+		<p>Enter maximal value for for Canny algorythm</p>
+		<input type="text" name="max_value">
+		<p>Enter scale value</p>
+		<input type="text" name="scale">
+		<p> </p>
+		<input type="hidden" value={{ m.id }} name="mes_id"> 
+		<button type="submit" id="button">submit</button>
+	</form>
+{% endblock %}
