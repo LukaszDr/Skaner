@@ -1,4 +1,4 @@
-from flask import make_response, render_template, flash, redirect, session, url_for, request, g, send_from_directory, send_file
+from flask import Response, make_response, render_template, flash, redirect, session, url_for, request, g, send_from_directory, send_file
 from flask_login import login_user, logout_user, current_user, login_required
 from app import app, db, lm, oid, models
 import time
@@ -8,6 +8,8 @@ from .models import Measure
 from .models import Photo
 from .models import Point
 from encoder import encoder
+import socket
+import time
 import RPi.GPIO as GPIO
 import datetime
 import cv2
@@ -205,6 +207,8 @@ def activate():
 @app.route('/addp')
 @login_required
 def addp():
+    os.system("sudo service motion stop")
+    time.sleep(1)
     global current_measure_id
     m = Measure.query.filter_by(id=current_measure_id).first()
     if m is None:
@@ -219,10 +223,21 @@ def addp():
      #check if photo is taken
         im.shape
     except:
-        temp=" "
-        flash(temp.join(('FAILURE!! adding photo for measure:',str(m.title),'CAMERA NOT READY')))
-        session['selected_id']=m.id
-        return redirect(url_for('points'))
+        counter=0
+        while(counter<5):
+            try:
+                time.sleep(1)
+                cam = cv2.VideoCapture(0)
+                s, im=cam.read()
+                 #check if photo is taken
+                im.shape
+            except:
+                counter=counter+1
+        if (counter>4):
+            temp=" "
+            flash(temp.join(('FAILURE!! adding photo for measure:',str(m.title),'CAMERA NOT READY')))
+            session['selected_id']=m.id
+            return redirect(url_for('points'))
 
     
     path = '/home/pi/skaner/app/photos/' + m.title
@@ -378,6 +393,9 @@ def info():
     return render_template("info.html",
                            m=m)
 
+
+
+
 @app.route('/download')
 @login_required
 def download():
@@ -476,7 +494,38 @@ def edit():
             
         
         return render_template("info.html",
-                            m=m)    
+                            m=m)
+
+def get_ip():
+    s=socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    return s.getsockname()[0]
+
+@app.route('/stream')
+@login_required
+def stream():
+    os.system("sudo service motion start")
+    link = 'http://' + str(get_ip()) + ':8081'
+    return redirect(link)
+
+
+#TUTAJ DODANE
+
+##def gen():
+##    while True:
+##        cam=cv2.VideoCapture(0)
+##        succes, image = cam.read()
+##        #ret, jpeg = cv2.imencode('.jpg',image)
+##        frame = image.tobytes()
+##        yield(b'--frame\r\n'
+##              b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
+##
+##              
+##@app.route('/stream')
+##def stream():
+##            return Response(gen(),
+##                            mimetype='multipart/x=mixed-replace, boundar=frame')
+
 
 
 #@app.route('/download/<path:filename>')
