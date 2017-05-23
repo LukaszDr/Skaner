@@ -11,6 +11,7 @@
     <div>SCANNER:
         {% if g.user.is_authenticated %}
         | <a href="{{ url_for('addp') }}">Make a photo</a>
+	| <a href="{{ url_for('stream') }}">Stream video</a>
         | <a href="{{ url_for('points') }}">Show current photos</a>
 	| <a href="{{ url_for('new') }}">Start new measure</a>
 	| <a href="{{ url_for('info') }}">Info & edit options</a>

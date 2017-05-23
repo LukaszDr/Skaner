@@ -208,11 +208,12 @@ def activate():
 @login_required
 def addp():
     os.system("sudo service motion stop")
-    time.sleep(1)
+    #time.sleep(1)
     global current_measure_id
     m = Measure.query.filter_by(id=current_measure_id).first()
     if m is None:
         flash('Make a new measure first!')
+        #os.system("sudo service motion start")
         return redirect(url_for('new'))
     allpoints.append([encoderx.value(),encodery.value()])
     filename=time.strftime("%Y%m%d-%H%M%S")
@@ -222,22 +223,24 @@ def addp():
         s, im=cam.read()
      #check if photo is taken
         im.shape
+        cam.release()
     except:
-        counter=0
-        while(counter<5):
-            try:
-                time.sleep(1)
-                cam = cv2.VideoCapture(0)
-                s, im=cam.read()
-                 #check if photo is taken
-                im.shape
-            except:
-                counter=counter+1
-        if (counter>4):
-            temp=" "
-            flash(temp.join(('FAILURE!! adding photo for measure:',str(m.title),'CAMERA NOT READY')))
-            session['selected_id']=m.id
-            return redirect(url_for('points'))
+##        counter=0
+##        while(counter<5):
+##            try:
+##                time.sleep(1)
+##                cam = cv2.VideoCapture(0)
+##                s, im=cam.read()
+##                 #check if photo is taken
+##                im.shape
+##            except:
+##                counter=counter+1
+##        if (counter>4):
+        temp=" "
+        flash(temp.join(('FAILURE!! adding photo for measure:',str(m.title),'CAMERA NOT READY')))
+        session['selected_id']=m.id
+        #os.system("sudo service motion start")
+        return redirect(url_for('points'))
 
     
     path = '/home/pi/skaner/app/photos/' + m.title
@@ -262,6 +265,7 @@ def addp():
     com.start()
     flash(s.join(('Added photo for measure:',str(m.title))))
     session['selected_id']=m.id
+    #os.system("sudo service motion start")
     return redirect(url_for('points'))
 
 @app.route('/points')
