@@ -90,6 +90,42 @@ def computecheck(threadname, measure):
     return 0
 
 
+def automode(posx,posy,limx,limy):
+    #local_encoderx=encoder(0,25,18,25)
+    #local_encodery=encoder(0,25,23,24)
+   # while(session['Automode']==True):
+    #wyznaczam prostokat
+    global encoderx
+    global ancodery
+    x_max=posx+limx/2
+    x_min=posx-limx/2
+    y_max=posy+limy/2
+    y_min=posy-limy/2
+    sleeptime=1
+    counter=0
+    while(posx<x_max and posx>x_min and posy<y_max and posy> y_min):
+        print(posx)
+        print(posy)
+        time.sleep(sleeptime)
+        #posx=encoderx.value()
+        #posy=encodery.value()
+        posx=encoderx.value()
+        posy=encodery.value()
+        counter=counter+1
+        if(counter*sleeptime>15):
+            print('koniec')
+            flash("automode stop")
+            return False
+    print('NEW PHOTO TIME!')
+    time.sleep(sleeptime)
+    while(posx-encoderx.value()!=0 or posy-encodery.value() !=0 ):
+        print('czekam na stop')
+        posx=encoderx.value()
+        posy=encodery.value()
+        time.sleep(sleeptime)
+    
+    return True
+
 @app.route('/new')
 @login_required
 def new():
@@ -262,8 +298,24 @@ def addp():
     db.session.commit()
 
     i= Photo.query.filter_by(photopath=path).first()
+
+
+    #prztwarzanie
     com = Process(target=compute, args=(i.photopath, i.id , m, ))
     com.start()
+
+
+    #automode  automode(posx,poxy,limx,limy)
+    if(session['Automode']==True):
+        print('ruszyl auto!!!')
+        #au=Process(target=automode, args=(i.value_x,i.value_y,60,60))
+        #au.start()
+        watch=automode(i.value_x,i.value_y,60,60)
+        if(watch==True):
+            return redirect(url_for('addp'))
+        else:
+            return redirect(url_for('manual'))
+    
     flash(s.join(('Added photo for measure:',str(m.title))))
     session['selected_id']=m.id
     #os.system("sudo service motion start")
@@ -281,8 +333,6 @@ def points():
         cur_id=session['selected_id']
         m = Measure.query.filter_by(id=cur_id).first()
         p = m.photos.all()
-        
-        
     session['selected_id']=m.id
     return render_template("points.html",
                            title='Points',
