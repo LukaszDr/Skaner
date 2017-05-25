@@ -31,7 +31,6 @@ allpoints=[]
 current_measure_id = None
 
 
-
 #watek przetwarzania
 def compute( threadname, photo_id, measure):
     #db.session=db.create_scoped_session()
@@ -214,6 +213,7 @@ def addp():
     if m is None:
         flash('Make a new measure first!')
         #os.system("sudo service motion start")
+        os.system("sudo service motion start")
         return redirect(url_for('new'))
     allpoints.append([encoderx.value(),encodery.value()])
     filename=time.strftime("%Y%m%d-%H%M%S")
@@ -239,6 +239,7 @@ def addp():
         temp=" "
         flash(temp.join(('FAILURE!! adding photo for measure:',str(m.title),'CAMERA NOT READY')))
         session['selected_id']=m.id
+        os.system("sudo service motion start")
         #os.system("sudo service motion start")
         return redirect(url_for('points'))
 
@@ -266,6 +267,7 @@ def addp():
     flash(s.join(('Added photo for measure:',str(m.title))))
     session['selected_id']=m.id
     #os.system("sudo service motion start")
+    os.system("sudo service motion start")
     return redirect(url_for('points'))
 
 @app.route('/points')
@@ -279,6 +281,7 @@ def points():
         cur_id=session['selected_id']
         m = Measure.query.filter_by(id=cur_id).first()
         p = m.photos.all()
+        
         
     session['selected_id']=m.id
     return render_template("points.html",
@@ -513,6 +516,38 @@ def stream():
     return redirect(link)
 
 
+
+
+#AUTO MODE FUNCTIONS
+@app.route('/auto')
+@login_required
+def auto():
+    try:
+        if (session['Automode']==True):
+            flash("Automode already active")
+        else:
+            session['Automode']=True
+            flash("Automode activated")
+    except:
+        session['Automode']=True
+        flash("Automode activated")
+    return redirect(url_for('points'))
+
+
+
+@app.route('/manual')
+@login_required
+def manual():
+    try:
+        if (session['Automode']==False):
+            flash("Manual mode already active")
+        else:
+            session['Automode']=False
+            flash("Manual mode activated")
+    except:
+        session['Automode']=False
+        flash("Manual mode activated")
+    return redirect(url_for('points'))
 #TUTAJ DODANE
 
 ##def gen():
