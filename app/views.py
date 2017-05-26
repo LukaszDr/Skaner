@@ -1,6 +1,6 @@
 from flask import Response, make_response, render_template, flash, redirect, session, url_for, request, g, send_from_directory, send_file
 from flask_login import login_user, logout_user, current_user, login_required
-from app import app, db, lm, oid, models
+from app import app, db, lm, oid, models, db_session
 import time
 from .forms import LoginForm
 from .models import User
@@ -21,8 +21,6 @@ import matplotlib.pyplot as plt
 #dodane:
 from multiprocessing import Process
 
-db.session=db.create_scoped_session()
-db.session.expire_on_commit=False
 GPIO.cleanup()
 GPIO.setmode(GPIO.BCM)  
 GPIO.setwarnings(False)
@@ -34,7 +32,11 @@ current_measure_id = None
 
 #watek przetwarzania
 def compute( threadname, photo_id, measure):
+    #db.session=db.scoped_session()
     #db.session=db.create_scoped_session()
+    #tu koment
+
+    #db.create_all()#=db.create_scoped_session()
     
     photo=Photo.query.filter_by(id=photo_id).first()
     #przeniesione nizej
@@ -56,17 +58,39 @@ def compute( threadname, photo_id, measure):
     
 
     print ("przed petla")
+    points = []
     #dodaje punkty
     for i in range(50,rowcount-51):
+        #if (20%i==0):
+        #        done=True
         for j in range(50,columncount-51):
             if(edges[i,j]!=0):
                 point= Point(value_x=photo.value_x+(i*measure.scale),
-                            value_y=photo.value_y+(j*measure.scale),
-                            photopath=photo)
-                db.session.add(point)
-                db.session.commit()
+                                value_y=photo.value_y+(j*measure.scale),
+                                photopath=photo)
+                points.append(point)
+##                done=False
+##                while(done==False):
+##                    if(db.session._is_clean()):
+##                        point= Point(value_x=photo.value_x+(i*measure.scale),
+##                                    value_y=photo.value_y+(j*measure.scale),
+##                                    photopath=photo)
+##                        db.session_local.add(point)
+##                        db.session.commit()
+##                        done=True
+                #except:
+                 #   print("nie pyklo")
+                     #   done=True
+                  #  except:
+                   #     print("FAAALSE")
+                    #    done=False
+        db_session.add_all(points)
+        photo.progress=(100*(i-50))/(rowcount-50)
+        db_session.commit()
+
+    photo.progress=100
     photo.calculated=True
-    db.session.commit()
+    db_session.commit()
     print ("po petli")
     preview()
     return 0
@@ -149,10 +173,13 @@ def preview():
     for photo in photos:
         #rows=Point.query_with_entities(Point.value_x,Point.value_y).filter_by(photopath=photo).all()
         rows = db.session.query(Point.value_x,Point.value_y).filter_by(photopath=photo).all()
-        x_val,y_val=zip(*rows)
-        plt.plot(x_val,y_val, 'ro')
-        
-        print rows
+        try:
+        #if rows is not  None:
+            x_val,y_val=zip(*rows)
+            plt.plot(x_val,y_val, 'ro')
+            #print rows
+        except:
+            print("Blank photo")
     plt.savefig('/home/pi/skaner/app/static/preview.png')
     plt.savefig('preview.png')
     plt.clf()
@@ -231,6 +258,15 @@ def new_post():
                          author=user)
         db.session.add(measure)
         db.session.commit()
+
+
+        #USUWAM PREVIEW
+        try:
+            os.remove("/home/pi/skaner/app/static/preview.png")
+        except:
+            print("juz pusty")
+
+            
         flash('New measure added! You can add points now.')
         current_measure_id = measure.id
         print current_measure_id
@@ -320,15 +356,22 @@ def addp():
         os.mkdir(path + '/edges')
     path=path + '/' + filename + '.png'
     cv2.imwrite(path, im)
-    photo = Photo(photopath=path,
-                  value_x=encoderx.value(),
-                  value_y=encodery.value(),
-                  calculated=False,
-                  title=m)
-    s=" "
-    db.session.add(photo)
-    db.session.commit()
-
+    done = False
+    
+    while(done == False):
+        try:
+            photo = Photo(photopath=path,
+                          value_x=encoderx.value(),
+                          value_y=encodery.value(),
+                          calculated=False,
+                          progress=0,
+                          title=m)
+            s=" "
+            db.session.add(photo)
+            db.session.commit()
+            done = True
+        except:
+            done = False
     i= Photo.query.filter_by(photopath=path).first()
 
 
@@ -441,6 +484,10 @@ def database_post():
     selected_id=int(selected_id)
     m = Measure.query.filter_by(id=selected_id).first()
 
+    if (m is None):
+        flash("Measure does not exist!")
+        return redirect(url_for('database'))
+    
     #usuwania
     if(info=="d"):
         allp=m.photos.all()

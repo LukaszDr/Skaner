@@ -47,6 +47,7 @@ class Photo(db.Model):
     value_x = db.Column(db.Float)
     value_y = db.Column(db.Float)
     calculated=db.Column(db.Boolean)
+    progress = db.Column(db.Integer)
     measure_id = db.Column(db.Integer, db.ForeignKey('measure.id'))
     points = db.relationship('Point', backref='photopath', lazy='dynamic')
 
