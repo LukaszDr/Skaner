@@ -460,13 +460,23 @@ def login():
                            providers=app.config['OPENID_PROVIDERS'])
 
 
-@app.route('/points', methods=['POST'])
+@app.route('/photo', methods=['POST'])
 @login_required
-def points_post():
+def photo():
     photo_id = int(request.form['submit'])
     photo = Photo.query.filter_by(id=photo_id).first()
     flash (photo.id)
-    return redirect(url_for('points'))
+    m_id=session['selected_id']
+    
+    measure=Measure.query.filter_by(id=m_id).first()
+    
+    path = os.path.basename(photo.photopath)
+    path = '/home/pi/skaner/app/photos/' + measure.title + '/edges/' + path
+    flash(path)
+    flash(photo.photopath)
+    shutil.copyfile(path,'/home/pi/skaner/app/static/photo.png')
+    shutil.copyfile(photo.photopath,'/home/pi/skaner/app/static/edges.png')
+    return render_template("photo.html")
 
 @app.route('/database', methods=['GET'])
 @login_required
