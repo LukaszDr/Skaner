@@ -36,7 +36,7 @@ def compute( threadname, photo_id, measure):
     #db.session=db.create_scoped_session()
     #tu koment
 
-    #db.create_all()#=db.create_scoped_session()
+    db.create_all()#=db.create_scoped_session()
     
     photo=Photo.query.filter_by(id=photo_id).first()
     #przeniesione nizej
@@ -84,13 +84,12 @@ def compute( threadname, photo_id, measure):
                   #  except:
                    #     print("FAAALSE")
                     #    done=False
-        db_session.add_all(points)
+        db.session.add_all(points)
         photo.progress=(100*(i-50))/(rowcount-50)
-        db_session.commit()
-
+        db.session.commit()
     photo.progress=100
     photo.calculated=True
-    db_session.commit()
+    db.session.commit()
     print ("po petli")
     preview()
     return 0
@@ -461,6 +460,13 @@ def login():
                            providers=app.config['OPENID_PROVIDERS'])
 
 
+@app.route('/points', methods=['POST'])
+@login_required
+def points_post():
+    photo_id = int(request.form['submit'])
+    photo = Photo.query.filter_by(id=photo_id).first()
+    flash (photo.id)
+    return redirect(url_for('points'))
 
 @app.route('/database', methods=['GET'])
 @login_required

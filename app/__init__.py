@@ -14,10 +14,7 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 path = 'sqlite:///' + os.path.join(basedir, 'app.db')
 engine=create_engine(path,convert_unicode=True)
-db_session=scoped_session(sessionmaker(autoflush=False,bind=engine))
-
-
-#autocomit=False
+db_session=scoped_session(sessionmaker(autocomit=False,autoflush=False,bind=engine))
 
 Base = declarative_base()
 Base.query=db_session.query_property()
@@ -41,4 +38,4 @@ lm.login_view = 'login'
 
 from app import views, models
 
-Base.metadata.create_all(bind=engine)
+#Base.metadata.create_all(bind=engine)
