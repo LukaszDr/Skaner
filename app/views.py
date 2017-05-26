@@ -16,6 +16,7 @@ import cv2
 import os
 import thread
 import shutil
+import matplotlib.pyplot as plt
 
 #dodane:
 from multiprocessing import Process
@@ -125,6 +126,23 @@ def automode(posx,posy,limx,limy):
         time.sleep(sleeptime)
     
     return True
+
+
+@app.route('/preview')
+@login_required
+def preview():
+    m_id=session['selected_id']
+    m=Measure.query.filter_by(id=m_id).first()
+    photos=m.photos.all()
+    for photo in photos:
+        #rows=Point.query_with_entities(Point.value_x,Point.value_y).filter_by(photopath=photo).all()
+        rows = db.session.query(Point.value_x,Point.value_y).filter_by(photopath=photo).all()
+        x_val,y_val=zip(*rows)
+        plt.plot(x_val,y_val, 'ro')
+        
+        print rows
+    plt.savefig('tescik.png')
+    return redirect(url_for('points'))
 
 @app.route('/new')
 @login_required
@@ -251,7 +269,7 @@ def addp():
         #os.system("sudo service motion start")
         os.system("sudo service motion start")
         return redirect(url_for('new'))
-    allpoints.append([encoderx.value(),encodery.value()])
+    #allpoints.append([encoderx.value(),encodery.value()])
     filename=time.strftime("%Y%m%d-%H%M%S")
 
     try:
@@ -310,7 +328,18 @@ def addp():
         print('ruszyl auto!!!')
         #au=Process(target=automode, args=(i.value_x,i.value_y,60,60))
         #au.start()
-        watch=automode(i.value_x,i.value_y,60,60)
+
+        #DO OGARNIECIA TEMAT X I Y
+
+        tempcam=cv2.VideoCapture(0)
+        #opdczytuje rozdzielczosc i mnoze razy skale
+        
+        xmax=(tempcam.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH)-150)*m.scale
+        ymax=(tempcam.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT)-150)*m.scale
+
+        tempcam.release()
+        print(xmax)
+        watch=automode(i.value_x,i.value_y, xmax,ymax)
         if(watch==True):
             return redirect(url_for('addp'))
         else:
