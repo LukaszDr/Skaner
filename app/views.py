@@ -68,6 +68,7 @@ def compute( threadname, photo_id, measure):
     photo.calculated=True
     db.session.commit()
     print ("po petli")
+    preview()
     return 0
 
 
@@ -131,9 +132,20 @@ def automode(posx,posy,limx,limy):
 @app.route('/preview')
 @login_required
 def preview():
-    m_id=session['selected_id']
+    global current_measure_id 
+    if(session['selected_id'] is None or session['selected_id']==""):
+        m_id=current_measure_id
+    else:
+        m_id=session['selected_id']
     m=Measure.query.filter_by(id=m_id).first()
     photos=m.photos.all()
+    print (m_id)
+    try:
+        os.remove("/home/pi/skaner/app/static/preview.png")
+    except:
+        print('nowe foto')
+    time.sleep(2)
+    plt.clf()
     for photo in photos:
         #rows=Point.query_with_entities(Point.value_x,Point.value_y).filter_by(photopath=photo).all()
         rows = db.session.query(Point.value_x,Point.value_y).filter_by(photopath=photo).all()
@@ -141,7 +153,9 @@ def preview():
         plt.plot(x_val,y_val, 'ro')
         
         print rows
-    plt.savefig('tescik.png')
+    plt.savefig('/home/pi/skaner/app/static/preview.png')
+    plt.savefig('preview.png')
+    plt.clf()
     return redirect(url_for('points'))
 
 @app.route('/new')
@@ -363,6 +377,7 @@ def points():
         m = Measure.query.filter_by(id=cur_id).first()
         p = m.photos.all()
     session['selected_id']=m.id
+    
     return render_template("points.html",
                            title='Points',
                            m=m,
