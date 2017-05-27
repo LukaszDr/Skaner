@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+	<h1>Photo:</h1>
+	<img src="/static/photo.png" alt="photo" style:"width:304px;height:228px;">
+	<h1>Edges:</h1>
+	<img src="/static/edges.png" alt="edges" style:"width:304px;height:228px;">
+	<h1>Click button to recalculate</h1>
+	<form action="recalculate" method="post">
+		<input type="submit" name="submit" value={{ p.id }}>
+	</form>
+{% endblock %}
