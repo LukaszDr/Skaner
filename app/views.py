@@ -24,8 +24,8 @@ from multiprocessing import Process
 GPIO.cleanup()
 GPIO.setmode(GPIO.BCM)  
 GPIO.setwarnings(False)
-encoderx=encoder(0,25,18,25)
-encodery=encoder(0,25,23,24)
+encoderx=encoder(0,25,23,24)
+encodery=encoder(0,25,18,25)
 allpoints=[]
 current_measure_id = None
 
@@ -66,8 +66,8 @@ def compute( threadname, photo_id, measure):
         for j in range(50,columncount-51):
             if(edges[i,j]!=0):
                 #TUTAJ ZMIENILEM X NA Y I ZMIENIAM ZNAK Y
-                point= Point(value_y=photo.value_x-(i*measure.scale),
-                                value_x=photo.value_y+(j*measure.scale),
+                point= Point(value_y=photo.value_y-(i*measure.scale),
+                                value_x=photo.value_x+(j*measure.scale),
                                 photopath=photo)
                 points.append(point)
 ##                done=False
@@ -219,6 +219,8 @@ def preview():
 @app.route('/new')
 @login_required
 def new():
+    global encoderx
+    global ancodery
     encodery.clear()
     encoderx.clear()
     user=g.user
@@ -227,6 +229,10 @@ def new():
 @app.route('/new', methods=['POST'])
 @login_required
 def new_post():
+    global encoderx
+    global ancodery
+    encodery.clear()
+    encoderx.clear()
     global current_measure_id
     user=g.user
     name=request.form['measure_name']

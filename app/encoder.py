@@ -23,26 +23,30 @@ class encoder():
     def handler1(self,channel):
         if GPIO.input(self.gpio1):
             if GPIO.input(self.gpio2):
-                self.counter=self.counter-1
-            else:
                 self.counter=self.counter+1
+            else:
+                self.counter=self.counter-1
         else:
             if GPIO.input(self.gpio2):
-                self.counter=self.counter+1
-            else:
                 self.counter=self.counter-1
+            else:
+                self.counter=self.counter+1
+        print(self.counter)
 
     def handler2(self,channel):
         if GPIO.input(self.gpio2):
             if GPIO.input(self.gpio1):
                 self.counter=self.counter-1
+                print(self.counter)
             else:
                 self.counter=self.counter+1
+                print(self.counter)
         else:
             if GPIO.input(self.gpio1):
                 self.counter=self.counter+1
             else:
                 self.counter=self.counter-1
+            print(self.counter)
 
     
 
