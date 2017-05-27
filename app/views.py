@@ -65,8 +65,9 @@ def compute( threadname, photo_id, measure):
         #        done=True
         for j in range(50,columncount-51):
             if(edges[i,j]!=0):
-                point= Point(value_x=photo.value_x+(i*measure.scale),
-                                value_y=photo.value_y+(j*measure.scale),
+                #TUTAJ ZMIENILEM X NA Y I ZMIENIAM ZNAK Y
+                point= Point(value_y=photo.value_x-(i*measure.scale),
+                                value_x=photo.value_y+(j*measure.scale),
                                 photopath=photo)
                 points.append(point)
 ##                done=False
@@ -151,6 +152,37 @@ def automode(posx,posy,limx,limy):
     
     return True
 
+@app.route('/recalculate', methods=['POST'])
+@login_required
+def recalculate():
+    #get current measure
+    global current_measure_id 
+    if(session['selected_id'] is None or session['selected_id']==""):
+        m_id=current_measure_id
+    else:
+        m_id=session['selected_id']
+    m=Measure.query.filter_by(id=m_id).first()
+
+    
+    #get photo
+    photo_id = int(request.form['submit'])
+    photo=Photo.query.filter_by(id=photo_id).first()
+
+    #delete points
+    points=photo.points.all()
+    for point in points:
+        db.session.delete(point)
+    photo.calculated=False
+    photo.progress=0
+    db.session.commit()
+
+    #start compute
+    proc = Process(target=compute, args=(photo.photopath, photo.id , m, ))
+    proc.start()
+    
+    #flash(photo_id)
+    
+    return redirect(url_for('points'))
 
 @app.route('/preview')
 @login_required
@@ -354,6 +386,7 @@ def addp():
         os.mkdir(path)
         os.mkdir(path + '/edges')
     path=path + '/' + filename + '.png'
+    print(filename)
     cv2.imwrite(path, im)
     done = False
     
@@ -472,11 +505,23 @@ def photo():
     
     path = os.path.basename(photo.photopath)
     path = '/home/pi/skaner/app/photos/' + measure.title + '/edges/' + path
-    flash(path)
-    flash(photo.photopath)
-    shutil.copyfile(path,'/home/pi/skaner/app/static/photo.png')
-    shutil.copyfile(photo.photopath,'/home/pi/skaner/app/static/edges.png')
-    return render_template("photo.html")
+    try:
+        os.remove('/home/pi/skaner/app/static/edges.png')
+    except:
+        print("file not exist")
+    try:
+        os.remove('/home/pi/skaner/app/static/photo.png')
+    except:
+        print("file not exist")        
+    time.sleep(1)
+    try:
+##        os.mkdir('/home/pi/skaner/app/static/' + str(photo.id) + '/')
+        shutil.copyfile(path,'/home/pi/skaner/app/static/edges.png')
+        shutil.copyfile(photo.photopath,'/home/pi/skaner/app/static/photo.png')
+    except:
+        print("file not exist")
+    return render_template("photo.html",
+                           p=photo)
 
 @app.route('/database', methods=['GET'])
 @login_required
@@ -650,6 +695,7 @@ def edit():
             for point in points:
                 db.session.delete(point)
             photo.calculated=False
+            photo.progress=0
             db.session.commit()
             proc = Process(target=compute, args=(photo.photopath, photo.id , m, ))
             proc.start()
