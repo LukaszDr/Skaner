@@ -85,9 +85,11 @@ def compute( threadname, photo_id, measure):
                   #  except:
                    #     print("FAAALSE")
                     #    done=False
-        db.session.add_all(points)
-        photo.progress=(100*(i-50))/(rowcount-50)
-        db.session.commit()
+        if (20%i==0):
+            db.session.add_all(points)
+            photo.progress=(100*(i-50))/(rowcount-50)
+            db.session.commit()
+            points = []
     photo.progress=100
     photo.calculated=True
     db.session.commit()
@@ -211,6 +213,7 @@ def preview():
             #print rows
         except:
             print("Blank photo")
+    plt.axis('equal')
     plt.savefig('/home/pi/skaner/app/static/preview.png')
     plt.savefig('preview.png')
     plt.clf()
