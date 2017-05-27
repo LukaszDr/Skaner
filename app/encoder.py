@@ -13,7 +13,7 @@ class encoder():
     
     
     def value(self):
-        return (self.counter)*(self.multiply)
+        return (self.counter)*(self.multiply)/1000 #przelcizenie z mikrometrow na milimetry
 
     
     def clear(self):
@@ -31,22 +31,18 @@ class encoder():
                 self.counter=self.counter-1
             else:
                 self.counter=self.counter+1
-        print(self.counter)
 
     def handler2(self,channel):
         if GPIO.input(self.gpio2):
             if GPIO.input(self.gpio1):
                 self.counter=self.counter-1
-                print(self.counter)
             else:
                 self.counter=self.counter+1
-                print(self.counter)
         else:
             if GPIO.input(self.gpio1):
                 self.counter=self.counter+1
             else:
                 self.counter=self.counter-1
-            print(self.counter)
 
     
 

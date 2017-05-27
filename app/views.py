@@ -233,6 +233,8 @@ def new_post():
     global ancodery
     encodery.clear()
     encoderx.clear()
+    encodery.counter=0
+    encoderx.counter=0
     global current_measure_id
     user=g.user
     name=request.form['measure_name']
@@ -270,7 +272,7 @@ def new_post():
         try:
             float(m_scale)
         except:
-            m_scale=0.08
+            m_scale=0.08646
             flash("value must be numbers. Typical value assigned to uncorrect values. Try editing")
         
         #assign typical values if None
@@ -347,6 +349,8 @@ def activate():
 @app.route('/addp')
 @login_required
 def addp():
+    global encoder_x
+    global encoder_y
     os.system("sudo service motion stop")
     #time.sleep(1)
     global current_measure_id
