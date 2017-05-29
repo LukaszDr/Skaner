@@ -29,6 +29,8 @@ encodery=encoder(0,25,18,25)
 allpoints=[]
 current_measure_id = None
 
+#Odpalenie diody
+GPIO.setup(21, GPIO.OUT)
 
 #watek przetwarzania
 def compute( threadname, photo_id, measure):
@@ -145,6 +147,7 @@ def automode(posx,posy,limx,limy):
             flash("automode stop")
             return False
     print('NEW PHOTO TIME!')
+    GPIO.output(21, GPIO.HIGH)
     time.sleep(sleeptime)
     while(posx-encoderx.value()!=0 or posy-encodery.value() !=0 ):
         print('czekam na stop')
@@ -365,13 +368,14 @@ def addp():
         return redirect(url_for('new'))
     #allpoints.append([encoderx.value(),encodery.value()])
     filename=time.strftime("%Y%m%d-%H%M%S")
-
     try:
+        GPIO.output(21, GPIO.HIGH)
         cam = cv2.VideoCapture(0)
         s, im=cam.read()
      #check if photo is taken
         im.shape
         cam.release()
+        GPIO.output(21, GPIO.LOW)
     except:
 ##        counter=0
 ##        while(counter<5):
@@ -384,6 +388,7 @@ def addp():
 ##            except:
 ##                counter=counter+1
 ##        if (counter>4):
+        GPIO.output(21, GPIO.LOW)
         temp=" "
         flash(temp.join(('FAILURE!! adding photo for measure:',str(m.title),'CAMERA NOT READY')))
         session['selected_id']=m.id
@@ -391,7 +396,6 @@ def addp():
         #os.system("sudo service motion start")
         return redirect(url_for('points'))
 
-    
     path = '/home/pi/skaner/app/photos/' + m.title
     try:
         os.stat(path)
