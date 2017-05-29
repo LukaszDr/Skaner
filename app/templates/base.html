@@ -1,26 +1,24 @@
 <html>
   <head>
     {% if title %}
-    <title>{{ title }} - microblog</title>
+    <title>{{ title }} - scanner</title>
     {% else %}
     <title>microblog</title>
     {% endif %}
   </head>
   <body>
     <h1>
-    <div>SCANNER:
-        {% if g.user.is_authenticated %}
-        | <a href="{{ url_for('addp') }}">Make a photo</a>
-	| <a href="{{ url_for('stream') }}">Stream video</a>
-        | <a href="{{ url_for('points') }}">Show current photos</a>
-	| <a href="{{ url_for('new') }}">Start new measure</a>
-	| <a href="{{ url_for('info') }}">Info & edit options</a>
-	| <a href="{{ url_for('database') }}">Database</a>
-	| <a href="{{ url_for('auto') }}">Auto</a>
-	| <a href="{{ url_for('manual') }}">manual</a>
-	| <a href="{{ url_for('logout') }}">Logout</a>
-        {% endif %}
-    </div>
+	{% if g.user.is_authenticated %}
+        	<a href="{{ url_for('addp') }}"><img src="/static/new photo.png" alt="new photo" width=28%" height="24%"></a>
+		<a href="{{ url_for('stream') }}"><img src="/static/video.png" alt="stream" width="28%" height="24%"></a>
+	        <a href="{{ url_for('points') }}"><img src="/static/current photos.png" alt="current points" width="28%" height="24%"></a>
+		<a href="{{ url_for('new') }}"><img src="/static/new measure.png" alt="new measure" width="28%" height="24%"></a>
+		<a href="{{ url_for('info') }}"><img src="/static/info & edit.png" alt="info & edit" width="28%" height="24%"></a>
+		<a href="{{ url_for('database') }}"><img src="/static/database.png" alt="database" width="28%" height="24%"></a>
+		<a href="{{ url_for('auto') }}"><img src="/static/automatic.png" alt="automatic" width="28%" height="24%"></a>
+		<a href="{{ url_for('manual') }}"><img src="/static/manual.png" alt="manual" width="28%" height="24%"></a>
+		<a href="{{ url_for('logout') }}"><img src="/static/logout.png" alt="logout" width="28%" height="24%"></a>
+	{% endif %}
     </h1>
     <hr>
     {% with messages = get_flashed_messages() %}
