@@ -1,4 +1,4 @@
-from flask import Response, make_response, render_template, flash, redirect, session, url_for, request, g, send_from_directory, send_file
+from flask import jsonify, Response, make_response, render_template, flash, redirect, session, url_for, request, g, send_from_directory, send_file
 from flask_login import login_user, logout_user, current_user, login_required
 from app import app, db, lm, oid, models, db_session
 import time
@@ -17,6 +17,8 @@ import os
 import thread
 import shutil
 import matplotlib.pyplot as plt
+import json#, simplejson
+
 
 #dodane:
 from multiprocessing import Process
@@ -547,10 +549,25 @@ def database():
     user = g.user
     measures = user.measures.all() #models.Measure.query.all()
     db.session.commit()
-    return render_template("database.html",
-                           title='database',
-                           users=users,
-                           measures=measures)
+    if (session['Andr']==True):
+        data_as_dict = []
+        data = []
+        for m in measures:
+            data = {
+                'id' : int(m.id),
+                'title' : m.title,
+                'time' : m.timestamp,
+                'min' : m.minVal,
+                'max' : m.maxVal,
+                'scale' : m.scale
+                }
+            data_as_dict.append(data)
+        return jsonify(data_as_dict)
+    else:    
+        return render_template("database.html",
+                               title='database',
+                               users=users,
+                               measures=measures)
 
 @app.route('/database', methods=['POST'])
 @login_required
@@ -603,7 +620,7 @@ def info():
     #return send_file("a.png", as_attachment=True)
     
     m = Measure.query.filter_by(id=int(selected_id)).first()
-    path = '/home/pi/skaner/app/photos/' + m.title + '/results of ' + m.title+ '.csv'
+    path = '/home/pi/skaner/app/photos/' + m.title + '/results of ' + m.title + '.csv'
     try:
         F = open(path, 'w')
         photos=m.photos.all()
@@ -612,11 +629,34 @@ def info():
             for point in points:
                 F.write(str(point.value_x)+(",")+str(point.value_y)+"\n")
         F.close
-        print path
     except:
         flash("This measurement has no photos taken!")
-    
-    return render_template("info.html",
+
+    path_2 = '/home/pi/skaner/app/photos/' + m.title + '/results of ' + m.title + '.scr'
+    try:
+        F_2 = open(path_2, 'w')
+        photos=m.photos.all()
+        F_2.write("_MULTIPLE _POINT \n")
+        for photo in photos:
+            points=photo.points.all()
+            for point in points:
+                F_2.write(str(point.value_x)+(",")+str(point.value_y)+"\n")
+        F_2.close
+    except:
+        flash("This measurement has no photos taken!")
+    if (session['Andr']==True):
+        data = {
+            'id' : m.id,
+            'title' : m.title,
+            'time' : m.timestamp,
+            'min' : m.minVal,
+            'max' : m.maxVal,
+            'scale' : m.scale
+            }
+        return jsonify(data)
+        
+    else:
+        return render_template("info.html",
                            m=m)
 
 
@@ -629,6 +669,20 @@ def download():
     m = Measure.query.filter_by(id=int(selected_id)).first()
     try:
         path = '/home/pi/skaner/app/photos/' + m.title + '/results of ' + m.title+ '.csv'
+        return send_file(path, as_attachment=True)
+    except:
+        flash("Cannot generate file! This measurement has no photos taken!")
+        return render_template("info.html",
+                               m=m)
+
+
+@app.route('/downloadscr')
+@login_required
+def downloadscr():
+    selected_id=session['selected_id']
+    m = Measure.query.filter_by(id=int(selected_id)).first()
+    try:
+        path = '/home/pi/skaner/app/photos/' + m.title + '/results of ' + m.title+ '.scr'
         return send_file(path, as_attachment=True)
     except:
         flash("Cannot generate file! This measurement has no photos taken!")
@@ -802,10 +856,44 @@ def logout():
     db.session.commit()
     return redirect(url_for('index'))
 
+@app.route('/android')
+def android():
+    session['Andr']=True
+    return jsonify(session['Andr'])
+    #return redirect(url_for('index'))
+
+@app.route('/notandroid')
+def notandroid():
+    session['Andr']=False
+    #flash(str(session['Andr']))
+    return jsonify(session['Andr'])
+    #return redirect(url_for('index'))
+
+
+
 
 @lm.user_loader
 def load_user(id):
     return User.query.get(int(id))
+
+@app.route('/loginandroid', methods = ['POST'])
+def login_android():
+    data=request.get_json()
+    print (data)
+    respemail = data['email']
+    respnickname = data['nickname']
+    if respemail is None or respemail == "":
+        return jsonify(False)
+    user = User.query.filter_by(email=respemail).first()
+    if user is None:
+        nickname = respnickname
+        if nickname is None or nickname == "":
+            nickname = respemail.split('@')[0]
+        user = User(nickname=nickname, email=respemail)
+        db.session.add(user)
+        db.session.commit()
+    login_user(user, remember = True)
+    return jsonify(True)
 
 
 @oid.after_login
