@@ -887,6 +887,92 @@ def app_newmeasure():
         return jsonify({'id' : int(measure.id)})
     return jsonify(False)
 
+
+@app.route('/app/editmeasure', methods=['POST'])
+def app_editmeasure():
+    data=request.get_json()
+    selected_id=data['id']
+    m = Measure.query.filter_by(id=int(selected_id)).first()
+    if m is None or m == "":
+        return jsonify(False)
+    #wczytuje pozostale dane nt pomiaru
+    m_minimal=data['min_value']
+    m_maximal=data['max_value']
+    m_scale=data['scale']
+    
+    #check if values are numbers
+    try:
+        float(m_minimal)
+    except:
+        m_minimal=""            
+    try:
+        float(m_maximal)
+    except:
+        m_maximal=""            
+    try:
+        float(m_scale)
+    except:
+        m_scale=""
+    change=False
+    #leave values if None
+    if m_minimal is None or m_minimal == "":
+        m_minimal=m.minVal
+    else:
+        change=True
+    if m_maximal is None or m_maximal == "":
+        m_maximal=m.maxVal
+    else:
+        change=True
+    if m_scale is None or m_scale == "":
+        m_scale=m.scale
+    else:
+        change=True
+        
+    if change == True:
+        m.minVal=m_minimal
+        m.maxVal=m_maximal
+        m.scale=m_scale
+        db.session.commit()
+
+        photos=m.photos.all()
+        for photo in photos:
+            points=photo.points.all()
+            for point in points:
+                db.session.delete(point)
+            photo.calculated=False
+            photo.progress=0
+            db.session.commit()
+            proc = Process(target=compute, args=(photo.photopath, photo.id , m, ))
+            proc.start()
+        db.session.commit()            
+        
+        return jsonify(True)
+    return jsonify(False)
+
+@app.route('/app/deletemeasure', methods=['POST'])
+def app_deletemeasure():
+    data=request.get_json()
+    selected_id=data['id']
+    m = Measure.query.filter_by(id=int(selected_id)).first()
+    if m is None or m == "":
+        return jsonify(False)
+    allp=m.photos.all()
+    for p in allp:
+        allpoints=p.points.all()
+        for point in allpoints:
+            db.session.delete(point)
+        db.session.delete(p)
+
+    db.session.delete(m)
+    db.session.commit()
+    #usuwam pliki
+    try:
+        path = '/home/pi/skaner/app/photos/' + m.title + '/'
+        shutil.rmtree(path)
+    except:
+        print 'directory already deleted'
+    return jsonify(True)
+    
 @app.route('/database', methods=['POST'])
 @login_required
 def database_post():
