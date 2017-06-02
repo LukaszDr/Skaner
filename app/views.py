@@ -548,6 +548,7 @@ def database():
     users = models.User.query.all()
     user = g.user
     measures = user.measures.all() #models.Measure.query.all()
+    #measures = Measure.query.all()
     db.session.commit()
     if (session['Andr']==True):
         data_as_dict = []
