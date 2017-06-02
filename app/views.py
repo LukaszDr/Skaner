@@ -18,6 +18,7 @@ import thread
 import shutil
 import matplotlib.pyplot as plt
 import json#, simplejson
+import base64
 
 
 #dodane:
@@ -30,6 +31,8 @@ encoderx=encoder(0,25,23,24)
 encodery=encoder(0,25,18,25)
 allpoints=[]
 current_measure_id = None
+global auto
+auto = False
 
 #Odpalenie diody
 GPIO.setup(21, GPIO.OUT)
@@ -547,28 +550,342 @@ def photo():
 def database():
     users = models.User.query.all()
     user = g.user
-    measures = user.measures.all() #models.Measure.query.all()
+    measures = user.measures.all()
+    #models.Measure.query.all()
     #measures = Measure.query.all()
     db.session.commit()
-    if (session['Andr']==True):
-        data_as_dict = []
-        data = []
-        for m in measures:
-            data = {
-                'id' : int(m.id),
-                'title' : m.title,
-                'time' : m.timestamp,
-                'min' : m.minVal,
-                'max' : m.maxVal,
-                'scale' : m.scale
-                }
-            data_as_dict.append(data)
-        return jsonify(data_as_dict)
-    else:    
-        return render_template("database.html",
+
+    #JAKO OSOBNA FUNKCJA
+    
+##    if (session['Andr']==True):
+##        data_as_dict = []
+##        data = []
+##        for m in measures:
+##            data = {
+##                'id' : int(m.id),
+##                'title' : m.title,
+##                'time' : m.timestamp,
+##                'min' : m.minVal,
+##                'max' : m.maxVal,
+##                'scale' : m.scale
+##                }
+##            data_as_dict.append(data)
+##        return jsonify(data_as_dict)  
+    return render_template("database.html",
                                title='database',
                                users=users,
                                measures=measures)
+ 
+
+@app.route('/app/users', methods=['GET'])
+def app_users():
+    users = User.query.all()
+    if users is None or users == "":
+        return jsonify(False)
+    data_as_dict = []
+    data = []
+    for u in users:
+        data = {
+            'id' : int(u.id),
+            'nickname' : u.nickname,
+            'email' : u.email,
+            }
+        data_as_dict.append(data)
+    return jsonify(data_as_dict) 
+
+@app.route('/app/measures', methods=['GET', 'POST'])
+def app_measures():
+    data=request.get_json()
+    u_id = int(data['user_id'])
+    u = User.query.filter_by(id=u_id).first()
+    if u is None or u == "":
+        return jsonify(False)
+    measures = u.measures.all()
+    if measures is None or measures == "":
+        return jsonify(False)
+    data_as_dict = []
+    data = []
+    for m in measures:
+        data = {
+            'id' : int(m.id),
+            'title' : m.title,
+            'time' : m.timestamp,
+            'min' : m.minVal,
+            'max' : m.maxVal,
+            'scale' : m.scale
+            }
+        data_as_dict.append(data)
+    return jsonify(data_as_dict)
+
+@app.route('/app/measure/results', methods=['GET', 'POST'])
+def app_measure_results():
+    data=request.get_json()
+    m_id = int(data['measure_id'])
+    m = Measure.query.filter_by(id=m_id).first()
+    data_as_dict = []
+    data = []
+    if m is None or m == "":
+        return jsonify(False)
+    try:
+        photos=m.photos.all()
+        for photo in photos:
+            points=photo.points.all()
+            for point in points:
+                data = {
+                    'x' : point.value_x,
+                    'y' : point.value_y
+                    }
+                data_as_dict.append(data)
+    except:
+        return jsonify(False)
+    return jsonify(data_as_dict)
+
+@app.route('/app/measure/photos', methods=['GET', 'POST'])
+def app_measure_photos():
+    data=request.get_json()
+    m_id = int(data['measure_id'])
+    m = Measure.query.filter_by(id=m_id).first()
+    data_as_dict = []
+    data = []
+    if m is None or m == "":
+        return jsonify(False)
+    try:
+        photos=m.photos.all()
+        if photos is None or photos == "":
+            return jsonify(False)
+        for photo in photos:
+            data = {
+                'id' : photo.id,
+                'photopath' : photo.photopath,
+                'value_x' : photo.value_x,
+                'value_y' : photo.value_y,
+                'calculated' : photo.calculated,
+                'progress' : photo.progress
+                }
+            data_as_dict.append(data)
+    except:
+        return jsonify(False)
+    return jsonify(data_as_dict)
+
+
+@app.route('/app/photo', methods=['GET', 'POST'])
+def app_photo():
+    data=request.get_json()
+    p_id = int(data['photo_id'])
+    p = Photo.query.filter_by(id=p_id).first()
+    if p is None or p == "":
+        return jsonify(False)
+    with open(p.photopath, "rb") as image_file:
+        encoded=base64.b64encode(image_file.read())
+    return jsonify({'picture' : encoded})
+
+@app.route('/app/photo_edges', methods=['GET', 'POST'])
+def app_photo_edges():
+    data=request.get_json()
+    p_id = int(data['photo_id'])
+    p = Photo.query.filter_by(id=p_id).first()
+    if p is None or p == "":
+        return jsonify(False)
+    measure = p.title
+    path = os.path.basename(p.photopath)
+    path = '/home/pi/skaner/app/photos/' + measure.title + '/edges/' + path
+    ##encoded = base64.b64encode(img)
+    with open(path, "rb") as image_file:
+        encoded=base64.b64encode(image_file.read())
+    return jsonify({'picture' : encoded})
+
+@app.route('/app/newphoto', methods=['POST'])
+def app_newphoto():
+    global auto
+    global encoder_x
+    global encoder_y
+    data=request.get_json()
+    m_id = int(data['measure_id'])
+    automode_andr  = bool(data['automode'])
+    if auto == True:
+        automode_andr = True
+    m = Measure.query.filter_by(id=m_id).first()
+    if m is None or m == "":
+        return jsonify(False)
+    os.system("sudo service motion stop")
+    filename=time.strftime("%Y%m%d-%H%M%S")
+    try:
+        GPIO.output(21, GPIO.HIGH)
+        cam = cv2.VideoCapture(0)
+        s, im=cam.read()
+     #check if photo is taken
+        im.shape
+        cam.release()
+        GPIO.output(21, GPIO.LOW)
+    except:
+##        counter=0
+##        while(counter<5):
+##            try:
+##                time.sleep(1)
+##                cam = cv2.VideoCapture(0)
+##                s, im=cam.read()
+##                 #check if photo is taken
+##                im.shape
+##            except:
+##                counter=counter+1
+##        if (counter>4):
+        GPIO.output(21, GPIO.LOW)
+        temp=" "
+        os.system("sudo service motion start")
+        return jsonify(False)
+
+    path = '/home/pi/skaner/app/photos/' + m.title
+    try:
+        os.stat(path)
+    except:
+        os.mkdir(path)
+        os.mkdir(path + '/edges')
+    path=path + '/' + filename + '.png'
+    cv2.imwrite(path, im)
+    done = False
+    
+    while(done == False):
+        try:
+            photo = Photo(photopath=path,
+                          value_x=encoderx.value(),
+                          value_y=encodery.value(),
+                          calculated=False,
+                          progress=0,
+                          title=m)
+            s=" "
+            db.session.add(photo)
+            db.session.commit()
+            done = True
+        except:
+            done = False
+    i= Photo.query.filter_by(photopath=path).first()
+
+
+    #prztwarzanie
+    com = Process(target=compute, args=(i.photopath, i.id , m, ))
+    com.start()
+
+
+    #automode  automode(posx,poxy,limx,limy)
+    if(automode_andr==True):
+        print('ruszyl auto!!!')
+        #au=Process(target=automode, args=(i.value_x,i.value_y,60,60))
+        #au.start()
+
+        #DO OGARNIECIA TEMAT X I Y
+
+        tempcam=cv2.VideoCapture(0)
+        #opdczytuje rozdzielczosc i mnoze razy skale
+        
+        xmax=(tempcam.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH)-150)*m.scale
+        ymax=(tempcam.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT)-150)*m.scale
+
+        tempcam.release()
+        print(xmax)
+        watch=automode(i.value_x,i.value_y, xmax,ymax)
+        if(watch==True):
+            auto = True
+            os.system("sudo service motion start")
+            return redirect(url_for('app_newphoto'))
+        else:
+            auto = False
+            os.system("sudo service motion start")
+            return jsonify(True)
+    
+    os.system("sudo service motion start")
+    return jsonify(True)
+
+@app.route('/app/newmeasure', methods=['POST'])
+def app_newmeasure():
+    global encoderx
+    global ancodery
+    encodery.clear()
+    encoderx.clear()
+    encodery.counter=0
+    encoderx.counter=0
+    
+    data=request.get_json()
+    name = data['name']
+    processed_text=name.upper()
+    if processed_text is None or processed_text == "":
+        return jsonify(False)
+    measure= Measure.query.filter_by(title=processed_text).first()
+    if measure is None:
+        #niekatywnosc
+        m= Measure.query.filter_by(active=True)
+        for i in m:
+            i.active=False
+            db.session.commit()
+            print i.title
+
+
+        #check if user exists
+        u_id=int(data['u_id'])
+        selected_user = User.query.filter_by(id=u_id).first()
+        if selected_user is None or selected_user == "":
+            return jsonify(False)
+        
+        #wczytuje pozostale dane nt pomiaru
+        m_minimal=data['min_value']
+        m_maximal=data['max_value']
+        m_scale=data['scale']
+        
+        #check if values are numbers
+        try:
+            float(m_minimal)
+        except:
+            m_minimal=400            
+        try:
+            float(m_maximal)
+        except:
+            m_maximal=500            
+        try:
+            float(m_scale)
+        except:
+            m_scale=0.08646        
+        #assign typical values if None
+        if m_minimal is None or m_minimal == "":
+            m_minimal=400
+        if m_maximal is None or m_minimal == "":
+            m_maximal=500
+        if m_scale is None or m_minimal == "":
+            m_scale=0.08
+        
+        #czyszcze encodery    
+        encodery.clear()
+        encoderx.clear()
+        #tworze nowy
+        measure= Measure(title=processed_text,
+                         timestamp=datetime.datetime.utcnow(),
+                         #DO USTALENIA!!!!
+                         minVal=m_minimal,
+                         maxVal=m_maximal,
+                         scale=m_scale,
+                         active=True,
+                         author=selected_user)
+        db.session.add(measure)
+        db.session.commit()
+
+
+        #USUWAM PREVIEW
+        try:
+            os.remove("/home/pi/skaner/app/static/preview.png")
+        except:
+            print("juz pusty")
+
+            
+        current_measure_id = measure.id
+
+        #start watku sprawdzajacego czy jest cos do przetworzenia
+        
+        #thread.start_new_thread(computecheck, (measure.title, measure, ))
+        #p = Process(target=computecheck, args=(measure.title, measure, ))
+        #p.start()
+        #p.join()
+        
+        db.session.commit()
+        return jsonify({'id' : int(measure.id)})
+    return jsonify(False)
 
 @app.route('/database', methods=['POST'])
 @login_required
@@ -645,19 +962,19 @@ def info():
         F_2.close
     except:
         flash("This measurement has no photos taken!")
-    if (session['Andr']==True):
-        data = {
-            'id' : m.id,
-            'title' : m.title,
-            'time' : m.timestamp,
-            'min' : m.minVal,
-            'max' : m.maxVal,
-            'scale' : m.scale
-            }
-        return jsonify(data)
-        
-    else:
-        return render_template("info.html",
+##    if (session['Andr']==True):
+##        data = {
+##            'id' : m.id,
+##            'title' : m.title,
+##            'time' : m.timestamp,
+##            'min' : m.minVal,
+##            'max' : m.maxVal,
+##            'scale' : m.scale
+##            }
+##        return jsonify(data)
+##        
+##    else:
+    return render_template("info.html",
                            m=m)
 
 
